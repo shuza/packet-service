@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package packet;
+
+service PacketService {
+    rpc GetPackets (Empty) returns (Response) {
+    }
+    rpc CreatePacket (Packet) returns (Response) {
+    }
+}
+
+message Empty {
+}
+
+message Item {
+    string id = 1;
+    string customer_id = 2;
+    string origin = 3;
+    string user_id = 4;
+}
+
+message Packet {
+    string is = 1;
+    string description = 2;
+    int32 weight = 3;
+    repeated Item items = 4;
+    string vessel_id = 5;
+}
+
+message Response {
+    bool created = 1;
+    Packet packet = 2;
+    repeated Packet packets = 3;
+}
