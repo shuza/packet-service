@@ -1,62 +1,18 @@
 package main
 
 import (
-	"context"
-	"github.com/joho/godotenv"
+	"github.com/shuza/packet-service/db"
 	pb "github.com/shuza/packet-service/proto"
+	"github.com/shuza/packet-service/service"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
 	"os"
-	"sync"
 )
 
-type repository interface {
-	Create(*pb.Packet) (*pb.Packet, error)
-	GetAll() []*pb.Packet
-}
-
-type Repository struct {
-	mu      sync.RWMutex
-	packets []*pb.Packet
-}
-
-//	Create new packet
-func (repo *Repository) Create(packet *pb.Packet) (*pb.Packet, error) {
-	repo.mu.Lock()
-	updated := append(repo.packets, packet)
-	repo.packets = updated
-	repo.mu.Unlock()
-	return packet, nil
-}
-
-//	Get all packets
-func (repo *Repository) GetAll() []*pb.Packet {
-	return repo.packets
-}
-
-type service struct {
-	repo repository
-}
-
-func (s *service) CreatePacket(ctx context.Context, req *pb.Packet) (*pb.Response, error) {
-	packet, err := s.repo.Create(req)
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.Response{Created: true, Packet: packet}, nil
-}
-
-func (s *service) GetPackets(ctx context.Context, req *pb.Empty) (*pb.Response, error) {
-	packets := s.repo.GetAll()
-	return &pb.Response{Packets: packets}, nil
-}
-
 func main() {
-	godotenv.Load()
-	repo := &Repository{}
+	repo := &db.Repository{}
 	port := os.Getenv("PORT")
 
 	//	setup gRPC server
@@ -70,7 +26,8 @@ func main() {
 	//	Register our service with gRPC server
 	//	this will tie our implementation into the auto-generated interface code
 	//	for our protobuf edition
-	pb.RegisterPacketServiceServer(s, &service{repo})
+	packetService := service.NewPacketService(repo)
+	pb.RegisterPacketServiceServer(s, &packetService)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
