@@ -24,7 +24,7 @@ message Packet {
     string description = 2;
     int32 weight = 3;
     repeated Item items = 4;
-    string vessel_id = 5;
+    string box_id = 5;
 }
 
 message Response {

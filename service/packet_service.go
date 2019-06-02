@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	boxPb "github.com/shuza/box-service/proto"
 	"github.com/shuza/packet-service/db"
 	pb "github.com/shuza/packet-service/proto"
 )
@@ -15,14 +16,27 @@ import (
  **/
 
 type service struct {
-	repo db.IRepository
+	repo             db.IRepository
+	boxServiceClient boxPb.BoxServiceClient
 }
 
-func NewPacketService(repo db.IRepository) service {
-	return service{repo: repo}
+func NewPacketService(repo db.IRepository, boxClient boxPb.BoxServiceClient) service {
+	return service{repo: repo, boxServiceClient: boxClient}
 }
 
 func (s *service) CreatePacket(ctx context.Context, req *pb.Packet) (*pb.Response, error) {
+	//	Call box service to find available box with packet weight
+	boxResponse, err := s.boxServiceClient.FindAvailableBox(context.Background(), &boxPb.Specification{
+		MaxWeight: req.Weight,
+		Capacity:  int32(len(req.Items)),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	req.BoxId = boxResponse.Box.Id
+
 	packet, err := s.repo.Create(req)
 	if err != nil {
 		return nil, err

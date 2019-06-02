@@ -1,6 +1,7 @@
 package main
 
 import (
+	boxPb "github.com/shuza/box-service/proto"
 	"github.com/shuza/packet-service/db"
 	pb "github.com/shuza/packet-service/proto"
 	"github.com/shuza/packet-service/service"
@@ -21,12 +22,19 @@ func main() {
 		log.Fatalln("failed to listen  :  ", err)
 	}
 
+	//	box service connection
+	conn, err := grpc.Dial(os.Getenv("BOX_SERVICE_ADDRESS"), grpc.WithInsecure())
+	if err != nil {
+		log.Fatalln("failed to connect Box Service :  ", err)
+	}
+	boxClient := boxPb.NewBoxServiceClient(conn)
+
 	s := grpc.NewServer()
 
 	//	Register our service with gRPC server
 	//	this will tie our implementation into the auto-generated interface code
 	//	for our protobuf edition
-	packetService := service.NewPacketService(repo)
+	packetService := service.NewPacketService(repo, boxClient)
 	pb.RegisterPacketServiceServer(s, &packetService)
 
 	// Register reflection service on gRPC server.
