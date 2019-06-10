@@ -13,7 +13,12 @@ import (
 )
 
 func main() {
-	repo := &db.Repository{}
+	repo := &db.MongoRepository{}
+	mongoUri := os.Getenv("MONGO_HOST")
+	if err := repo.Init(mongoUri); err != nil {
+		panic(err)
+	}
+
 	port := os.Getenv("PORT")
 
 	//	setup gRPC server
