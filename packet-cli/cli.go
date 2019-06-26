@@ -6,11 +6,13 @@ import (
 	pb "github.com/shuza/packet-service/proto"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"io/ioutil"
 	"os"
 )
 
 const (
+	//	address         = "192.168.99.100:30088"
 	address         = "localhost:8080"
 	defaultFilename = "packet.json"
 )
@@ -46,7 +48,10 @@ func main() {
 		log.Fatalln("Can't parse file  :  ", err)
 	}
 
-	response, err := client.CreatePacket(context.Background(), packet)
+	md := metadata.Pairs("token", "this is dummy token")
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+
+	response, err := client.CreatePacket(ctx, packet)
 	if err != nil {
 		log.Fatalln("Can't create packet  :  ", err)
 	}
