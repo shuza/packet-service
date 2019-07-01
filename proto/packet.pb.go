@@ -4,13 +4,15 @@
 package packet
 
 import (
-	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 	math "math"
+)
+
+import (
+	client "github.com/micro/go-micro/client"
+	server "github.com/micro/go-micro/server"
+	context "golang.org/x/net/context"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -279,116 +281,73 @@ var fileDescriptor_c344942e71fec3df = []byte{
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
-var _ grpc.ClientConn
+var _ client.Option
+var _ server.Option
 
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
+// Client API for PacketService service
 
-// PacketServiceClient is the client API for PacketService service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type PacketServiceClient interface {
-	GetPackets(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Response, error)
-	CreatePacket(ctx context.Context, in *Packet, opts ...grpc.CallOption) (*Response, error)
+	GetPackets(ctx context.Context, in *Empty, opts ...client.CallOption) (*Response, error)
+	CreatePacket(ctx context.Context, in *Packet, opts ...client.CallOption) (*Response, error)
 }
 
 type packetServiceClient struct {
-	cc *grpc.ClientConn
+	c           client.Client
+	serviceName string
 }
 
-func NewPacketServiceClient(cc *grpc.ClientConn) PacketServiceClient {
-	return &packetServiceClient{cc}
+func NewPacketServiceClient(serviceName string, c client.Client) PacketServiceClient {
+	if c == nil {
+		c = client.NewClient()
+	}
+	if len(serviceName) == 0 {
+		serviceName = "packet"
+	}
+	return &packetServiceClient{
+		c:           c,
+		serviceName: serviceName,
+	}
 }
 
-func (c *packetServiceClient) GetPackets(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Response, error) {
+func (c *packetServiceClient) GetPackets(ctx context.Context, in *Empty, opts ...client.CallOption) (*Response, error) {
+	req := c.c.NewRequest(c.serviceName, "PacketService.GetPackets", in)
 	out := new(Response)
-	err := c.cc.Invoke(ctx, "/packet.PacketService/GetPackets", in, out, opts...)
+	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *packetServiceClient) CreatePacket(ctx context.Context, in *Packet, opts ...grpc.CallOption) (*Response, error) {
+func (c *packetServiceClient) CreatePacket(ctx context.Context, in *Packet, opts ...client.CallOption) (*Response, error) {
+	req := c.c.NewRequest(c.serviceName, "PacketService.CreatePacket", in)
 	out := new(Response)
-	err := c.cc.Invoke(ctx, "/packet.PacketService/CreatePacket", in, out, opts...)
+	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// PacketServiceServer is the server API for PacketService service.
-type PacketServiceServer interface {
-	GetPackets(context.Context, *Empty) (*Response, error)
-	CreatePacket(context.Context, *Packet) (*Response, error)
+// Server API for PacketService service
+
+type PacketServiceHandler interface {
+	GetPackets(context.Context, *Empty, *Response) error
+	CreatePacket(context.Context, *Packet, *Response) error
 }
 
-// UnimplementedPacketServiceServer can be embedded to have forward compatible implementations.
-type UnimplementedPacketServiceServer struct {
+func RegisterPacketServiceHandler(s server.Server, hdlr PacketServiceHandler, opts ...server.HandlerOption) {
+	s.Handle(s.NewHandler(&PacketService{hdlr}, opts...))
 }
 
-func (*UnimplementedPacketServiceServer) GetPackets(ctx context.Context, req *Empty) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPackets not implemented")
-}
-func (*UnimplementedPacketServiceServer) CreatePacket(ctx context.Context, req *Packet) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreatePacket not implemented")
+type PacketService struct {
+	PacketServiceHandler
 }
 
-func RegisterPacketServiceServer(s *grpc.Server, srv PacketServiceServer) {
-	s.RegisterService(&_PacketService_serviceDesc, srv)
+func (h *PacketService) GetPackets(ctx context.Context, in *Empty, out *Response) error {
+	return h.PacketServiceHandler.GetPackets(ctx, in, out)
 }
 
-func _PacketService_GetPackets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(PacketServiceServer).GetPackets(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/packet.PacketService/GetPackets",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PacketServiceServer).GetPackets(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _PacketService_CreatePacket_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Packet)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(PacketServiceServer).CreatePacket(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/packet.PacketService/CreatePacket",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PacketServiceServer).CreatePacket(ctx, req.(*Packet))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _PacketService_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "packet.PacketService",
-	HandlerType: (*PacketServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "GetPackets",
-			Handler:    _PacketService_GetPackets_Handler,
-		},
-		{
-			MethodName: "CreatePacket",
-			Handler:    _PacketService_CreatePacket_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/packet.proto",
+func (h *PacketService) CreatePacket(ctx context.Context, in *Packet, out *Response) error {
+	return h.PacketServiceHandler.CreatePacket(ctx, in, out)
 }

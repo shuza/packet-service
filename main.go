@@ -3,16 +3,21 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/micro/go-micro"
+	"github.com/micro/go-micro/server"
 	boxPb "github.com/shuza/box-service/proto"
 	"github.com/shuza/packet-service/db"
 	pb "github.com/shuza/packet-service/proto"
 	"github.com/shuza/packet-service/service"
+	userPb "github.com/shuza/porter/user-service/proto"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/reflection"
-	"net"
 	"os"
+)
+
+var (
+	srv micro.Service
 )
 
 func main() {
@@ -21,36 +26,47 @@ func main() {
 	if err := repo.Init(mongoUri); err != nil {
 		panic(err)
 	}
+	defer repo.Close()
 
-	port := os.Getenv("PORT")
+	srv := micro.NewService(
+		micro.Name("porter.packet"),
+		micro.Version("latest"),
+		micro.WrapHandler(AuthWrapper),
+	)
+	boxClient := boxPb.NewBoxServiceClient(os.Getenv("BOX_SERVICE_ADDRESS"), srv.Client())
 
-	//	setup gRPC server
-	listen, err := net.Listen("tcp", port)
-	if err != nil {
-		log.Fatalln("failed to listen  :  ", err)
-	}
+	//	It will parse the command line flags
+	srv.Init()
 
-	//	box service connection
-	conn, err := grpc.Dial(os.Getenv("BOX_SERVICE_ADDRESS"), grpc.WithInsecure())
-	if err != nil {
-		log.Fatalln("failed to connect Box Service :  ", err)
-	}
-	boxClient := boxPb.NewBoxServiceClient(conn)
-
-	s := grpc.NewServer(grpc.UnaryInterceptor(AuthInterceptor))
-
-	//	Register our service with gRPC server
-	//	this will tie our implementation into the auto-generated interface code
-	//	for our protobuf edition
 	packetService := service.NewPacketService(repo, boxClient)
-	pb.RegisterPacketServiceServer(s, &packetService)
+	pb.RegisterPacketServiceHandler(srv.Server(), &packetService)
 
-	// Register reflection service on gRPC server.
-	reflection.Register(s)
+	log.Println("user service is running...")
+	if err := srv.Run(); err != nil {
+		panic(err)
+	}
 
-	log.Println("Running on port :  ", port)
-	if err := s.Serve(listen); err != nil {
-		log.Fatalln("failed to server  :  ", err)
+}
+
+func AuthWrapper(fn server.HandlerFunc) server.HandlerFunc {
+	return func(ctx context.Context, req server.Request, resp interface{}) error {
+		meta, ok := metadata.FromIncomingContext(ctx)
+		if !ok || len(meta["token"]) < 1 {
+			return errors.New("no auth meta-data found in request")
+		}
+
+		token := meta["token"][0]
+		log.Println("token :  %v\n", token)
+
+		//	Authenticate request here
+		authClient := userPb.NewUserServiceClient(os.Getenv("USER_SERVICE_ADDRESS"), srv.Client())
+		if _, err := authClient.ValidateToken(ctx, &userPb.Token{Token: token}); err != nil {
+			return err
+		}
+
+		err := fn(ctx, req, resp)
+		return err
+
 	}
 }
 

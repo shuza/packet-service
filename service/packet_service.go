@@ -25,7 +25,7 @@ func NewPacketService(repo db.IRepository, boxClient boxPb.BoxServiceClient) ser
 	return service{repo: repo, boxServiceClient: boxClient}
 }
 
-func (s *service) CreatePacket(ctx context.Context, req *pb.Packet) (*pb.Response, error) {
+func (s *service) CreatePacket(ctx context.Context, req *pb.Packet, resp *pb.Response) error {
 	//	Call box service to find available box with packet weight
 	boxResponse, err := s.boxServiceClient.FindAvailableBox(context.Background(), &boxPb.Specification{
 		MaxWeight: req.Weight,
@@ -33,7 +33,7 @@ func (s *service) CreatePacket(ctx context.Context, req *pb.Packet) (*pb.Respons
 	})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	log.Println("Found box :  ", boxResponse.Box.Id)
@@ -41,13 +41,18 @@ func (s *service) CreatePacket(ctx context.Context, req *pb.Packet) (*pb.Respons
 
 	err = s.repo.Create(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	return &pb.Response{Created: true}, nil
+	resp.Created = true
+	resp.Packet = req
+	return nil
 }
 
-func (s *service) GetPackets(ctx context.Context, req *pb.Empty) (*pb.Response, error) {
+func (s *service) GetPackets(ctx context.Context, req *pb.Empty, resp *pb.Response) error {
 	packets, err := s.repo.GetAll()
-	return &pb.Response{Packets: packets}, err
+	if err != nil {
+		return err
+	}
+	resp.Packets = packets
+	return nil
 }
