@@ -22,3 +22,10 @@ run:
 	MONGO_HOST=$(MONGO_HOST) \
 	USER_SERVICE_ADDRESS=$(USER_SERVICE_ADDRESS) \
 	go run main.go
+
+deploy: docker_build
+	kubectl apply -f ./deployment/packet-deployment.yaml
+
+delete:
+	kubectl delete svc packet-service
+	kubectl delete deployment packet-deployment

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	k8s "github.com/micro/examples/kubernetes/go/micro"
 	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/server"
 	boxPb "github.com/shuza/box-service/proto"
@@ -11,7 +12,6 @@ import (
 	"github.com/shuza/packet-service/service"
 	userPb "github.com/shuza/porter/user-service/proto"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"os"
 )
@@ -28,7 +28,7 @@ func main() {
 	}
 	defer repo.Close()
 
-	srv := micro.NewService(
+	srv := k8s.NewService(
 		micro.Name("porter.packet"),
 		micro.Version("latest"),
 		micro.WrapHandler(AuthWrapper),
@@ -41,7 +41,7 @@ func main() {
 	packetService := service.NewPacketService(repo, boxClient)
 	pb.RegisterPacketServiceHandler(srv.Server(), &packetService)
 
-	log.Println("user service is running...")
+	log.Println("packet service is running...")
 	if err := srv.Run(); err != nil {
 		panic(err)
 	}
@@ -68,19 +68,4 @@ func AuthWrapper(fn server.HandlerFunc) server.HandlerFunc {
 		return err
 
 	}
-}
-
-func AuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	meta, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		log.Warnf("Missing context metadata")
-		return nil, errors.New("missing context metadata")
-	}
-	if len(meta["token"]) != 1 {
-		log.Warnf("invalid token len != 1")
-		return nil, errors.New("invalid token")
-	}
-
-	log.Println("Token  ==   ", meta["token"][0])
-	return handler(ctx, req)
 }
