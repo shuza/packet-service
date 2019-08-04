@@ -26,7 +26,7 @@ func NewBoxService(client http.Client, serviceUrl string) boxService {
 	return boxService{client: client, boxServiceUrl: serviceUrl}
 }
 
-func (s boxService) FindSuitableBox(capacity int32, weight int32) (model.Box, error) {
+func (s boxService) FindSuitableBox(capacity int, weight int32) (model.Box, error) {
 	url := fmt.Sprintf("%s/box", s.boxServiceUrl)
 	req, _ := http.NewRequest(http.MethodGet, url, nil)
 	req.URL.Query().Add("capacity", string(capacity))
