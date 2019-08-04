@@ -1,7 +1,7 @@
 package db
 
 import (
-	pb "github.com/shuza/packet-service/proto"
+	"packet-service/model"
 )
 
 /**
@@ -14,7 +14,9 @@ import (
 
 type IRepository interface {
 	Init(host string) error
-	Create(*pb.Packet) error
-	GetAll() ([]*pb.Packet, error)
+	Create(packet model.Packet) error
+	GetAll() ([]model.Packet, error)
 	Close()
 }
+
+var Client IRepository

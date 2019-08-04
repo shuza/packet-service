@@ -1,71 +1,30 @@
 package main
 
 import (
-	"context"
-	"errors"
-	k8s "github.com/micro/examples/kubernetes/go/micro"
-	"github.com/micro/go-micro"
-	"github.com/micro/go-micro/server"
-	boxPb "github.com/shuza/box-service/proto"
-	"github.com/shuza/packet-service/db"
-	pb "github.com/shuza/packet-service/proto"
-	"github.com/shuza/packet-service/service"
-	userPb "github.com/shuza/porter/user-service/proto"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/metadata"
+	"fmt"
 	"os"
-)
-
-var (
-	srv micro.Service
+	"packet-service/api"
+	"packet-service/db"
 )
 
 func main() {
-	repo := &db.MongoRepository{}
-	mongoUri := os.Getenv("MONGO_HOST")
-	if err := repo.Init(mongoUri); err != nil {
-		panic(err)
-	}
-	defer repo.Close()
+	initDB()
 
-	srv := k8s.NewService(
-		micro.Name("porter.packet"),
-		micro.Version("latest"),
-		micro.WrapHandler(AuthWrapper),
-	)
-	boxClient := boxPb.NewBoxServiceClient(os.Getenv("BOX_SERVICE_ADDRESS"), srv.Client())
+	r := api.NewGinEngine()
 
-	//	It will parse the command line flags
-	srv.Init()
-
-	packetService := service.NewPacketService(repo, boxClient)
-	pb.RegisterPacketServiceHandler(srv.Server(), &packetService)
-
-	log.Println("packet service is running...")
-	if err := srv.Run(); err != nil {
-		panic(err)
-	}
-
+	fmt.Println("Packet service is running on port 8082")
+	r.Run(":8082")
 }
 
-func AuthWrapper(fn server.HandlerFunc) server.HandlerFunc {
-	return func(ctx context.Context, req server.Request, resp interface{}) error {
-		meta, ok := metadata.FromIncomingContext(ctx)
-		if !ok || len(meta["token"]) < 1 {
-			return errors.New("no auth meta-data found in request")
-		}
+func initDB() {
+	db.Client = &db.MongoRepository{}
+	if err := db.Client.Init(os.Getenv("MONGO_HOST")); err != nil {
+		panic(err)
+	}
 
-		token := meta["token"][0]
-		log.Println("token :  %v\n", token)
-
-		//	Authenticate request here
-		authClient := userPb.NewUserServiceClient(os.Getenv("USER_SERVICE_ADDRESS"), srv.Client())
-		if _, err := authClient.ValidateToken(ctx, &userPb.Token{Token: token}); err != nil {
-			return err
-		}
-
-		err := fn(ctx, req, resp)
-		return err
-
+	r := api.NewGinEngine()
+	fmt.Println("Packet service is running on port :8082")
+	if err := r.Run(":8082"); err != nil {
+		panic(err)
 	}
 }

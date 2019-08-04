@@ -4,6 +4,6 @@ RUN mkdir /app
 WORKDIR /app
 ADD packet-service /app
 
-ENV PORT=:8000
+ENV PORT=:8082
 
 CMD ["./packet-service"]

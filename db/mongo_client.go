@@ -1,8 +1,8 @@
 package db
 
 import (
-	pb "github.com/shuza/packet-service/proto"
 	"gopkg.in/mgo.v2"
+	"packet-service/model"
 )
 
 type MongoRepository struct {
@@ -22,13 +22,13 @@ func (repo *MongoRepository) Init(host string) error {
 }
 
 //	Create new packet
-func (repo *MongoRepository) Create(packet *pb.Packet) error {
+func (repo *MongoRepository) Create(packet model.Packet) error {
 	return repo.collection().Insert(packet)
 }
 
 //	Get all packets
-func (repo *MongoRepository) GetAll() ([]*pb.Packet, error) {
-	packets := make([]*pb.Packet, 0)
+func (repo *MongoRepository) GetAll() ([]model.Packet, error) {
+	packets := make([]model.Packet, 0)
 	err := repo.collection().Find(nil).All(&packets)
 
 	return packets, err
