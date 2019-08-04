@@ -48,3 +48,17 @@ func createPacket(c *gin.Context) {
 		"data":    packet,
 	})
 }
+
+func packetList(c *gin.Context) {
+	packets, err := db.Client.GetAll()
+	if err != nil {
+		log.Warnf("/packet list database Error :  %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Can't find packets in Database",
+			"data":    err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, packets)
+}

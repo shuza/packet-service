@@ -9,6 +9,7 @@ func NewGinEngine() *gin.Engine {
 
 	routes := r.Group("/api/v1")
 	routes.POST("/packet", createPacket)
+	routes.GET("/packet", packetList)
 
 	return r
 }
