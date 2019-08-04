@@ -23,7 +23,7 @@ func createPacket(c *gin.Context) {
 	}
 
 	boxService := service.NewBoxService(service.NewHttpClient(), os.Getenv("BOX_SERVICE_ADDRESS"))
-	box, err := boxService.FindSuitableBox(len(packet.Items), packet.Weight)
+	box, err := boxService.FindSuitableBox(int32(len(packet.Items)), packet.Weight)
 	if err != nil {
 		log.Warnf("/create packet can't find suitable box Error :  %v\n", err)
 		c.JSON(http.StatusNotFound, gin.H{

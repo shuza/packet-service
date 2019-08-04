@@ -17,7 +17,6 @@ docker_push: docker_build
 	docker push shuzasa/packet-service:$(APP_VERSION)
 
 run:
-	PORT=$(PORT) \
 	BOX_SERVICE_ADDRESS=$(BOX_SERVICE_ADDRESS) \
 	MONGO_HOST=$(MONGO_HOST) \
 	USER_SERVICE_ADDRESS=$(USER_SERVICE_ADDRESS) \
